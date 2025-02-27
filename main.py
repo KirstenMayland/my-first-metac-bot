@@ -72,13 +72,13 @@ class Q1TemplateBot(ForecastBot):
     async def run_research(self, question: MetaculusQuestion) -> str:
         async with self._concurrency_limiter:
             research = ""
-            if os.getenv("ASKNEWS_CLIENT_ID") and os.getenv("ASKNEWS_SECRET"):
-                research = AskNewsSearcher().get_formatted_news(question.question_text)
-            elif os.getenv("EXA_API_KEY"):
-                research = await self._call_exa_smart_searcher(question.question_text)
-            elif os.getenv("PERPLEXITY_API_KEY"):
-                research = await self._call_perplexity(question.question_text)
-            elif os.getenv("OPENROUTER_API_KEY"):
+            # if os.getenv("ASKNEWS_CLIENT_ID") and os.getenv("ASKNEWS_SECRET"):
+            #     research = AskNewsSearcher().get_formatted_news(question.question_text)
+            # elif os.getenv("EXA_API_KEY"):
+            #     research = await self._call_exa_smart_searcher(question.question_text)
+            # elif os.getenv("PERPLEXITY_API_KEY"):
+            #     research = await self._call_perplexity(question.question_text)
+            if os.getenv("OPENROUTER_API_KEY"):
                 research = await self._call_perplexity(question.question_text, use_open_router=True)
             else:
                 research = ""
@@ -95,6 +95,8 @@ class Q1TemplateBot(ForecastBot):
 
             Question:
             {question}
+
+            Try to find base rates/historical rates and any way that the current situation is different from history.
             """
         )
         if use_open_router:
@@ -108,36 +110,41 @@ class Q1TemplateBot(ForecastBot):
         response = await model.invoke(prompt)
         return response
 
-    async def _call_exa_smart_searcher(self, question: str) -> str:
-        """
-        SmartSearcher is a custom class that is a wrapper around a search on Exa.ai
-        """
-        searcher = SmartSearcher(
-            model=self._get_final_decision_llm(),
-            temperature=0,
-            num_searches_to_run=2,
-            num_sites_per_search=10,
-        )
-        prompt = (
-            "You are an assistant to a superforecaster. The superforecaster will give"
-            "you a question they intend to forecast on. To be a great assistant, you generate"
-            "a concise but detailed rundown of the most relevant news, including if the question"
-            "would resolve Yes or No based on current information. You do not produce forecasts yourself."
-            f"\n\nThe question is: {question}"
-        )  # You can ask the searcher to filter by date, exclude/include a domain, and run specific searches for finding sources vs finding highlights within a source
-        response = await searcher.invoke(prompt)
-        return response
+    # async def _call_exa_smart_searcher(self, question: str) -> str:
+    #     """
+    #     SmartSearcher is a custom class that is a wrapper around a search on Exa.ai
+    #     """
+    #     searcher = SmartSearcher(
+    #         model=self._get_final_decision_llm(),
+    #         temperature=0,
+    #         num_searches_to_run=2,
+    #         num_sites_per_search=10,
+    #     )
+    #     prompt = (
+    #         "You are an assistant to a superforecaster. The superforecaster will give"
+    #         "you a question they intend to forecast on. To be a great assistant, you generate"
+    #         "a concise but detailed rundown of the most relevant news, including if the question"
+    #         "would resolve Yes or No based on current information. You do not produce forecasts yourself."
+    #         f"\n\nThe question is: {question}"
+    #     )  # You can ask the searcher to filter by date, exclude/include a domain, and run specific searches for finding sources vs finding highlights within a source
+    #     response = await searcher.invoke(prompt)
+    #     return response
 
     def _get_final_decision_llm(self) -> GeneralLlm:
         model = None
-        if os.getenv("OPENAI_API_KEY"):
-            model = GeneralLlm(model="gpt-4o", temperature=0.3)
-        elif os.getenv("ANTHROPIC_API_KEY"):
-            model = GeneralLlm(model="claude-3-5-sonnet-20241022", temperature=0.3)
-        elif os.getenv("OPENROUTER_API_KEY"):
-            model = GeneralLlm(model="openrouter/openai/gpt-4o", temperature=0.3)
-        elif os.getenv("METACULUS_TOKEN"):
-            model = GeneralLlm(model="metaculus/gpt-4o", temperature=0.3)
+        # if os.getenv("OPENAI_API_KEY"):
+        #     model = GeneralLlm(model="gpt-4o", temperature=0.3)
+        # elif os.getenv("ANTHROPIC_API_KEY"):
+        #     model = GeneralLlm(model="claude-3-5-sonnet-20241022", temperature=0.3)
+        # if os.getenv("OPENROUTER_API_KEY"):
+        #     model = GeneralLlm(model="openrouter/openai/gpt-4o", temperature=0.3)
+        # elif os.getenv("METACULUS_TOKEN"):
+        #     model = GeneralLlm(model="metaculus/gpt-4o", temperature=0.3)
+        # else:
+        #     raise ValueError("No API key for final_decision_llm found")
+
+        if os.getenv("OPENROUTER_API_KEY"):
+            model = GeneralLlm(model="openrouter/openai/o3-mini", temperature=0.3)
         else:
             raise ValueError("No API key for final_decision_llm found")
         return model
@@ -172,6 +179,7 @@ class Q1TemplateBot(ForecastBot):
             (b) The status quo outcome if nothing changed.
             (c) A brief description of a scenario that results in a No outcome.
             (d) A brief description of a scenario that results in a Yes outcome.
+            (e) Please consider the historical base rate and make a guess if you are not sure
 
             You write your rationale remembering that good forecasters put extra weight on the status quo outcome since the world changes slowly most of the time.
 
@@ -351,7 +359,7 @@ def summarize_reports(forecast_reports: list[ForecastReport | BaseException]) ->
             f"{len(minor_exceptions)} minor exceptions occurred while forecasting: {minor_exceptions}"
         )
 
-
+# TODO: best place to make changes
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run the Q1TemplateBot forecasting system"
@@ -371,6 +379,7 @@ if __name__ == "__main__":
         "test_questions",
     ], "Invalid run mode"
 
+    # make changes
     template_bot = Q1TemplateBot(
         research_reports_per_question=1,
         predictions_per_research_report=5,
