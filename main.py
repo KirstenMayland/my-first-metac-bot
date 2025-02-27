@@ -379,14 +379,14 @@ if __name__ == "__main__":
         "test_questions",
     ], "Invalid run mode"
 
-    # make changes
+    # make changes, change last back to true
     template_bot = Q1TemplateBot(
         research_reports_per_question=1,
         predictions_per_research_report=5,
         use_research_summary_to_forecast=False,
         publish_reports_to_metaculus=True,
         folder_to_save_reports_to=None,
-        skip_previously_forecasted_questions=True,
+        skip_previously_forecasted_questions=False, 
     )
 
     if run_mode == "tournament":
