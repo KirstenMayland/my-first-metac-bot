@@ -349,7 +349,7 @@ if __name__ == "__main__":
         use_research_summary_to_forecast=False,
         publish_reports_to_metaculus=True,
         folder_to_save_reports_to=None,
-        skip_previously_forecasted_questions=False, 
+        skip_previously_forecasted_questions=True, 
     )
 
     if run_mode == "tournament":
