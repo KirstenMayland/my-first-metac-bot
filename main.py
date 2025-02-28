@@ -107,8 +107,8 @@ class Q1TemplateBot(ForecastBot):
     def _get_final_decision_llm(self) -> GeneralLlm:
         model = None
         if os.getenv("OPENROUTER_API_KEY"):
-            # model = GeneralLlm(model="openrouter/openai/o3-mini", temperature=0.3)
-            model = GeneralLlm(model="openrouter/deepseek/deepseek-r1:free", temperature=0.3)
+            model = GeneralLlm(model="openrouter/openai/o3-mini", temperature=0.3)
+            # model = GeneralLlm(model="openrouter/deepseek/deepseek-r1:free", temperature=0.3)
         else:
             raise ValueError("No API key for final_decision_llm found")
         return model
@@ -323,7 +323,6 @@ def summarize_reports(forecast_reports: list[ForecastReport | BaseException]) ->
             f"{len(minor_exceptions)} minor exceptions occurred while forecasting: {minor_exceptions}"
         )
 
-# TODO: best place to make changes
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run the Q1TemplateBot forecasting system"
