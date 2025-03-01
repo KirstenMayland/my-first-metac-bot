@@ -132,14 +132,15 @@ class Q1TemplateBot(ForecastBot):
 
             except Exception as e:
                 if "RateLimitError" in str(e):
-                    logger.warning(f"RateLimitError detected: {e}. Retrying in {wait_time} seconds...")
+                    logger.info("hiiii found")
                     use_free_model = False
                     attempts += 1
                     wait_time = 2 ** attempts  # Exponential backoff (2, 4, 8, 16, 32 sec)
                     await asyncio.sleep(wait_time)
+                    logger.warning(f"RateLimitError detected: {e}. Retrying in {wait_time} seconds...")
                 else:
                     logger.error(f"Unexpected error: {e}")
-                return e
+                    return e
             
         logger.error("Max retries reached. Returning RateLimitError.")
         return RateLimitError("Rate limit exceeded after retries")
