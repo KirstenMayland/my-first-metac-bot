@@ -113,166 +113,40 @@ class Q1TemplateBot(ForecastBot):
     #     if self.use_free_model:
     #         logger.info("Switching to the paid model due to rate limit.")
     #         self.use_free_model = False  # Switch to paid model
-    # async def _research_and_make_predictions(self, *args, **kwargs):
+    async def _research_and_make_predictions(self, *args, **kwargs):
 
-    #     try:
-    #         await super()._research_and_make_predictions(*args, **kwargs)
+        try:
+            report = await super()._research_and_make_predictions(*args, **kwargs)
 
-    #         # Detect if it's a RateLimitError
-    #         if "RateLimitError" in errors:
-    #             use_free_model = False
-    #             logger.warning(f"RateLimitError detected: {e}")
-
-    #     except Exception as e:
-    #         # Detect if it's a RateLimitError
-    #         if "RateLimitError" in errors:
-    #             use_free_model = False
-    #             logger.warning(f"RateLimitError detected: {e}")
-
-    async def _research_and_make_predictions(
-        self, question: MetaculusQuestion
-    ) -> ResearchWithPredictions[PredictionTypes]:
-        research = await self.run_research(question)
-        summary_report = await self.summarize_research(question, research)
-        research_to_use = (
-            summary_report
-            if self.use_research_summary_to_forecast
-            else research
-        )
-
-        if isinstance(question, BinaryQuestion):
-            forecast_function = lambda q, r: self._run_forecast_on_binary(q, r)
-        elif isinstance(question, MultipleChoiceQuestion):
-            forecast_function = (
-                lambda q, r: self._run_forecast_on_multiple_choice(q, r)
-            )
-        elif isinstance(question, NumericQuestion):
-            forecast_function = lambda q, r: self._run_forecast_on_numeric(
-                q, r
-            )
-        elif isinstance(question, DateQuestion):
-            raise NotImplementedError("Date questions not supported yet")
-        else:
-            raise ValueError(f"Unknown question type: {type(question)}")
-
-        tasks = cast(
-            list[Coroutine[Any, Any, ReasonedPrediction[Any]]],
-            [
-                forecast_function(question, research_to_use)
-                for _ in range(self.predictions_per_research_report)
-            ],
-        )
-        valid_predictions, errors, exception_group = (
-            await self._gather_results_and_exceptions(tasks)
-        )
-        if errors:
-            logger.warning(f"Encountered errors while predicting: {errors}")
             # Detect if it's a RateLimitError
-            if "RateLimitError" in errors:
+            for error in report.errors:
+                if "RateLimitError" in error:
+                    use_free_model = False
+                    logger.warning(f"RateLimitError detected: {error}")
+                    return
+
+        except Exception as e:
+            # Detect if it's a RateLimitError
+            if "RateLimitError" in e:
                 use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
-
-        if len(valid_predictions) == 0:
-            assert exception_group, "Exception group should not be None"
-            self._reraise_exception_with_prepended_message(
-                exception_group,
-                "Error while running research and predictions",
-            )
-        return ResearchWithPredictions(
-            research_report=research,
-            summary_report=summary_report,
-            errors=errors,
-            predictions=valid_predictions,
-        )
         
-    # async def _run_individual_question(self, *args, **kwargs):
-    #     try:
-    #         await super()._run_individual_question(*args, **kwargs)
+    async def _run_individual_question(self, *args, **kwargs):
+        try:
+            report = await super()._run_individual_question(*args, **kwargs)
 
-    #         # Detect if it's a RateLimitError
-    #         if "RateLimitError" in research_errors:
-    #             use_free_model = False
-    #             logger.warning(f"RateLimitError detected: {e}")
-
-    #     except Exception as e:
-    #         # Detect if it's a RateLimitError
-    #         if "RateLimitError" in errors:
-    #             use_free_model = False
-    #             logger.warning(f"RateLimitError detected: {e}")
-
-    async def _run_individual_question(
-        self, question: MetaculusQuestion
-    ) -> ForecastReport:
-        scratchpad = await self._initialize_scratchpad(question)
-        async with self._scratch_pad_lock:
-            self._scratch_pads.append(scratchpad)
-        with MonetaryCostManager() as cost_manager:
-            start_time = time.time()
-            prediction_tasks = [
-                self._research_and_make_predictions(question)
-                for _ in range(self.research_reports_per_question)
-            ]
-            valid_prediction_set, research_errors, exception_group = (
-                await self._gather_results_and_exceptions(prediction_tasks)
-            )
-            if research_errors:
-                logger.warning(
-                    f"Encountered errors while researching: {research_errors}"
-                )
-                # Detect if it's a RateLimitError
-                if "RateLimitError" in research_errors:
+            # Detect if it's a RateLimitError
+            for error in report.all_errors:
+                if "RateLimitError" in error:
                     use_free_model = False
-                    logger.warning(f"RateLimitError detected: {e}")
-            if len(valid_prediction_set) == 0:
-                assert exception_group, "Exception group should not be None"
-                self._reraise_exception_with_prepended_message(
-                    exception_group,
-                    f"All {self.research_reports_per_question} research reports/predictions failed",
-                )
-            prediction_errors = [
-                error
-                for prediction_set in valid_prediction_set
-                for error in prediction_set.errors
-            ]
-            all_errors = research_errors + prediction_errors
+                    logger.warning(f"RateLimitError detected: {error}")
+                    return
 
-            report_type = DataOrganizer.get_report_type_for_question_type(
-                type(question)
-            )
-            all_predictions = [
-                reasoned_prediction.prediction_value
-                for research_prediction_collection in valid_prediction_set
-                for reasoned_prediction in research_prediction_collection.predictions
-            ]
-            aggregated_prediction = await self._aggregate_predictions(
-                all_predictions,
-                question,
-            )
-            end_time = time.time()
-            time_spent_in_minutes = (end_time - start_time) / 60
-            final_cost = cost_manager.current_usage
-
-        unified_explanation = self._create_unified_explanation(
-            question,
-            valid_prediction_set,
-            aggregated_prediction,
-            final_cost,
-            time_spent_in_minutes,
-        )
-        report = report_type(
-            question=question,
-            prediction=aggregated_prediction,
-            explanation=unified_explanation,
-            price_estimate=final_cost,
-            minutes_taken=time_spent_in_minutes,
-            errors=all_errors,
-        )
-        if self.publish_reports_to_metaculus:
-            await report.publish_report_to_metaculus()
-        await self._remove_scratchpad(question)
-        return report
-
-
+        except Exception as e:
+            # Detect if it's a RateLimitError
+            if "RateLimitError" in e:
+                use_free_model = False
+                logger.warning(f"RateLimitError detected: {e}")
 
     async def run_research(self, question: MetaculusQuestion) -> str:
         async with self._concurrency_limiter:
@@ -592,6 +466,7 @@ if __name__ == "__main__":
                 Q1_2025_AI_BENCHMARKING_ID, return_exceptions=True
             )
         )
+            
     elif run_mode == "quarterly_cup":
         # The quarterly cup is a good way to test the bot's performance on regularly open questions. You can also use AXC_2025_TOURNAMENT_ID = 32564
         Q1_2025_QUARTERLY_CUP_ID = 32630
