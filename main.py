@@ -132,14 +132,15 @@ class Q1TemplateBot(ForecastBot):
 
             except Exception as e:
                 if "RateLimitError" in str(e):
+                    logger.warning(f"RateLimitError detected: {e}. Retrying in {wait_time} seconds...")
                     use_free_model = False
                     attempts += 1
                     wait_time = 2 ** attempts  # Exponential backoff (2, 4, 8, 16, 32 sec)
-                    logger.warning(f"RateLimitError detected: {e}. Retrying in {wait_time} seconds...")
                     await asyncio.sleep(wait_time)
                 else:
                     logger.error(f"Unexpected error: {e}")
                 return e
+            
         logger.error("Max retries reached. Returning RateLimitError.")
         return RateLimitError("Rate limit exceeded after retries")
 
@@ -180,6 +181,7 @@ class Q1TemplateBot(ForecastBot):
 
     def _get_final_decision_llm(self) -> GeneralLlm:
         global use_free_model
+        logger.info(f"Running _get_final_decision_llm with use_free_model = {use_free_model}")
         # model = None
         # if os.getenv("OPENROUTER_API_KEY"):
         #     model = GeneralLlm(model="openrouter/openai/o3-mini-high", temperature=0.3)
