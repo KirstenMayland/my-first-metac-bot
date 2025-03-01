@@ -107,8 +107,8 @@ class Q1TemplateBot(ForecastBot):
     def _get_final_decision_llm(self) -> GeneralLlm:
         model = None
         if os.getenv("OPENROUTER_API_KEY"):
-            # model = GeneralLlm(model="openrouter/openai/o3-mini", temperature=0.3)
-            model = GeneralLlm(model="openrouter/deepseek/deepseek-r1", temperature=0.3)
+            model = GeneralLlm(model="openrouter/openai/o3-mini", temperature=0.3)
+            # model = GeneralLlm(model="openrouter/deepseek/deepseek-r1", temperature=0.3)
         else:
             raise ValueError("No API key for final_decision_llm found")
         return model
@@ -349,7 +349,7 @@ if __name__ == "__main__":
         use_research_summary_to_forecast=False,
         publish_reports_to_metaculus=True,
         folder_to_save_reports_to=None,
-        skip_previously_forecasted_questions=False, 
+        skip_previously_forecasted_questions=True, 
     )
 
     if run_mode == "tournament":
