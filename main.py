@@ -36,21 +36,34 @@ litellm_logger.setLevel(logging.WARNING)
 litellm_logger.propagate = False
 
 # Custom logging handler to capture log messages
-class RateLimitLogHandler(logging.Handler):
+class RateLimitLogHandler(logging.Handler, log_file_path=None):
     def __init__(self, switch_model_callback):
         super().__init__()
         self.switch_model_callback = switch_model_callback
+
+        # Generate a unique file name based on current date and time
+        if log_file_path is None:
+            log_file_path = f"rate_limit_errors_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
+        # Open the log file in append mode
+        self.log_file = open(log_file_path, 'a')
 
     def emit(self, record):
         try:
             msg = self.format(record)
             print(f"RateLimitLogHandler received message: {msg}")  # Debugging line
-            if "rate limit" in msg.lower():  # Adjust if needed based on exact message
+            if "rate limit" in msg.lower() or "ratelimiterror" in msg.lower():  # Adjust if needed based on exact message
                 self.switch_model_callback()
-            elif "ratelimiterror" in msg.lower():  # Adjust if needed based on exact message
-                self.switch_model_callback()
+
+            # Write the error message to the log file with timestamp
+            self.log_file.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {msg}\n")
+            self.log_file.flush()  # Ensure to write the output to the file immediately
+
         except Exception:
             self.handleError(record)
+
+    def close(self):
+        # Close the file when done
+        self.log_file.close()
 
 class Q1TemplateBot(ForecastBot):
     """
@@ -89,9 +102,7 @@ class Q1TemplateBot(ForecastBot):
     # await self.rate_limiter.wait_till_able_to_acquire_resources(1) # 1 because it's consuming 1 request (use more if you are adding a token limit)
 
 
-    _max_concurrent_questions = (
-        1         # Set this to whatever works for your search-provider/ai-model rate limits
-    )
+    _max_concurrent_questions = 1         # Set this to whatever works for your search-provider/ai-model rate limits
     _concurrency_limiter = asyncio.Semaphore(_max_concurrent_questions)
 
     last_request_time = 0  # Track the last request time to enforce delay
@@ -174,7 +185,10 @@ class Q1TemplateBot(ForecastBot):
             except Exception as e: # it's comming from a warning and in the message
                 logger.info(f"Error: {str(e)}")
                 raise  # Raise other errors immediately
-
+    
+    def cleanup(self):
+        # Make sure to close the log file when we're done
+        self.rate_limit_handler.close()
 
     async def _run_forecast_on_binary(
         self, question: BinaryQuestion, research: str
@@ -454,4 +468,5 @@ if __name__ == "__main__":
         )
     forecast_reports = typeguard.check_type(forecast_reports, list[ForecastReport | BaseException])
     summarize_reports(forecast_reports)
+    template_bot.cleanup()
 
