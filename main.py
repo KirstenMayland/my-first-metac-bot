@@ -108,6 +108,7 @@ class Q1TemplateBot(ForecastBot):
     use_free_model = True
 
     def __init__(self, *args, **kwargs):
+        print("hiiiiii")
         # Make sure to call the parent __init__ method (don't override it)
         super().__init__(*args, **kwargs)
         
