@@ -37,7 +37,7 @@ litellm_logger.propagate = False
 
 # Custom logging handler to capture log messages
 class RateLimitLogHandler(logging.Handler, log_file_path=None):
-    def __init__(self, switch_model_callback):
+    def __init__(self, switch_model_callback, log_file_path=None):
         super().__init__()
         self.switch_model_callback = switch_model_callback
 
@@ -50,7 +50,6 @@ class RateLimitLogHandler(logging.Handler, log_file_path=None):
     def emit(self, record):
         try:
             msg = self.format(record)
-            print(f"RateLimitLogHandler received message: {msg}")  # Debugging line
             if "rate limit" in msg.lower() or "ratelimiterror" in msg.lower():  # Adjust if needed based on exact message
                 self.switch_model_callback()
 
