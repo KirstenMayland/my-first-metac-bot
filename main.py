@@ -148,7 +148,7 @@ class Q1TemplateBot(ForecastBot):
         response = await model.invoke(prompt)
         return response
 
-    async def _get_final_decision_llm(self) -> GeneralLlm:
+    def _get_final_decision_llm(self) -> GeneralLlm:
         global use_free_model
         # model = None
         # if os.getenv("OPENROUTER_API_KEY"):
@@ -165,7 +165,7 @@ class Q1TemplateBot(ForecastBot):
                 # Enforce a 5-second delay between requests
                 time_since_last_request = time.time() - self.last_request_time
                 if time_since_last_request < 6:
-                    await time.sleep(6 - time_since_last_request)
+                    time.sleep(6 - time_since_last_request)
                 self.last_request_time = time.time()  # Update request time
                 
                 model = GeneralLlm(model="openrouter/deepseek/deepseek-r1:free", temperature=0.3)
@@ -220,7 +220,7 @@ class Q1TemplateBot(ForecastBot):
             The last thing you write is your final answer as: "Probability: ZZ%", 0-100
             """
         )
-        reasoning = await (await self._get_final_decision_llm()).invoke(prompt)
+        reasoning = await self._get_final_decision_llm().invoke(prompt)
         prediction: float = PredictionExtractor.extract_last_percentage_value(
             reasoning, max_prediction=1, min_prediction=0
         )
@@ -269,7 +269,7 @@ class Q1TemplateBot(ForecastBot):
             Option_N: Probability_N
             """
         )
-        reasoning = await (await self._get_final_decision_llm()).invoke(prompt)
+        reasoning = await self._get_final_decision_llm().invoke(prompt)
         prediction: PredictedOptionList = (
             PredictionExtractor.extract_option_list_with_percentage_afterwards(
                 reasoning, question.options
@@ -335,7 +335,7 @@ class Q1TemplateBot(ForecastBot):
             "
             """
         )
-        reasoning = await (await self._get_final_decision_llm()).invoke(prompt)
+        reasoning = await self._get_final_decision_llm().invoke(prompt)
         prediction: NumericDistribution = (
             PredictionExtractor.extract_numeric_distribution_from_list_of_percentile_number_and_probability(
                 reasoning, question
