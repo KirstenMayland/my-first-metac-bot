@@ -128,9 +128,7 @@ class Q1TemplateBot(ForecastBot):
     #             use_free_model = False
     #             logger.warning(f"RateLimitError detected: {e}")
 
-    async def _research_and_make_predictions(
-        self, question: MetaculusQuestion
-    ) -> ResearchWithPredictions[PredictionTypes]:
+    async def _research_and_make_predictions(self, *args, **kwargs):
         research = await self.run_research(question)
         summary_report = await self.summarize_research(question, research)
         research_to_use = (
@@ -199,9 +197,7 @@ class Q1TemplateBot(ForecastBot):
     #             use_free_model = False
     #             logger.warning(f"RateLimitError detected: {e}")
 
-    async def _run_individual_question(
-        self, question: MetaculusQuestion
-    ) -> ForecastReport:
+    async def _run_individual_question(self, *args, **kwargs):
         scratchpad = await self._initialize_scratchpad(question)
         async with self._scratch_pad_lock:
             self._scratch_pads.append(scratchpad)
