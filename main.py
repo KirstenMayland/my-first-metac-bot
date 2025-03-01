@@ -114,6 +114,7 @@ class Q1TemplateBot(ForecastBot):
                 logger.warning(f"RateLimitError detected: {e}")
                 return
 
+            logger.info("checking if rate limit error 3")
             if "RateLimitError" in e:
                 use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
@@ -124,7 +125,7 @@ class Q1TemplateBot(ForecastBot):
             report = await super()._run_individual_question(*args, **kwargs)
 
             # Detect if it's a RateLimitError
-            logger.info("checking if rate limit error 3")
+            logger.info("checking if rate limit error 4")
             for error in report.all_errors:
                 if "RateLimitError" in error:
                     use_free_model = False
@@ -133,12 +134,13 @@ class Q1TemplateBot(ForecastBot):
 
         except Exception as e:
             # Detect if it's a RateLimitError
-            logger.info("checking if rate limit error 4")
+            logger.info("checking if rate limit error 5")
             if e is RuntimeError:
                 use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
                 return
 
+            logger.info("checking if rate limit error 6")
             if "RateLimitError" in e:
                 use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
@@ -189,6 +191,7 @@ class Q1TemplateBot(ForecastBot):
 
         model = None
         try:
+            logger.info(f"use_free_model = {use_free_model}")
             if use_free_model and os.getenv("OPENROUTER_API_KEY"):
                 logger.info("Attempting to use free model")                    
                 # Enforce a 5-second delay between requests
