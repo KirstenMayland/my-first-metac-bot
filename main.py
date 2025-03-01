@@ -5,6 +5,7 @@ import os
 import time
 from datetime import datetime
 from typing import Literal
+from forecasting_tools.ai_models.resource_managers.refreshing_bucket_rate_limiter import RefreshingBucketRateLimiter
 
 from forecasting_tools import (
     AskNewsSearcher,
@@ -25,6 +26,8 @@ from forecasting_tools import (
 )
 import typeguard
 
+use_free_model = True
+
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
@@ -35,35 +38,23 @@ litellm_logger = logging.getLogger("LiteLLM")
 litellm_logger.setLevel(logging.WARNING)
 litellm_logger.propagate = False
 
-# Custom logging handler to capture log messages
-class RateLimitLogHandler(logging.Handler):
-    def __init__(self, switch_model_callback, log_file_path=None):
-        super().__init__()
-        self.switch_model_callback = switch_model_callback
+rate_limit_handler = RateLimitLogHandler()
+logger.addHandler(rate_limit_handler)
 
-        # Generate a unique file name based on current date and time
-        if log_file_path is None:
-            log_file_path = f"rate_limit_errors_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
-        # Open the log file in append mode
-        self.log_file = open(log_file_path, 'a')
+# Custom logging handler to capture log messages
+class RateLimitLogHandler():
+    def __init__(self):
+        super().__init__()
 
     def emit(self, record):
         try:
             msg = self.format(record)
             if "rate limit" in msg.lower() or "ratelimiterror" in msg.lower():  # Adjust if needed based on exact message
-                self.switch_model_callback()
-
-            # Write the error message to the log file with timestamp
-            self.log_file.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {msg}\n")
-            self.log_file.flush()  # Ensure to write the output to the file immediately
+                use_free_model = False
 
         except Exception:
             self.handleError(record)
-
-    def close(self):
-        # Close the file when done
-        self.log_file.close()
-
+        
 class Q1TemplateBot(ForecastBot):
     """
     This is a template bot that uses the forecasting-tools library to simplify bot making.
@@ -105,21 +96,20 @@ class Q1TemplateBot(ForecastBot):
     _concurrency_limiter = asyncio.Semaphore(_max_concurrent_questions)
 
     last_request_time = 0  # Track the last request time to enforce delay
-    use_free_model = True
+    # use_free_model = True
 
-    def __init__(self, *args, **kwargs):
-        print("hiiiiii")
-        # Make sure to call the parent __init__ method (don't override it)
-        super().__init__(*args, **kwargs)
+    # def __init__(self, *args, **kwargs):
+    #     # Make sure to call the parent __init__ method (don't override it)
+    #     super().__init__(*args, **kwargs)
         
-        # Add rate-limit handler after initialization
-        rate_limit_handler = RateLimitLogHandler(self.switch_to_paid_model)
-        logger.addHandler(rate_limit_handler)
+    #     # Add rate-limit handler after initialization
+    #     rate_limit_handler = RateLimitLogHandler(self.switch_to_paid_model)
+    #     logger.addHandler(rate_limit_handler)
 
-    def switch_to_paid_model(self):
-        if self.use_free_model:
-            logger.info("Switching to the paid model due to rate limit.")
-            self.use_free_model = False  # Switch to paid model
+    # def switch_to_paid_model(self):
+    #     if self.use_free_model:
+    #         logger.info("Switching to the paid model due to rate limit.")
+    #         self.use_free_model = False  # Switch to paid model
 
     async def run_research(self, question: MetaculusQuestion) -> str:
         async with self._concurrency_limiter:
@@ -167,7 +157,7 @@ class Q1TemplateBot(ForecastBot):
         model = None
         while True:
             try:
-                if self.use_free_model:
+                if use_free_model:
                     logger.info("Attempting to use free model")                    
                     # Enforce a 5-second delay between requests
                     time_since_last_request = time.time() - self.last_request_time
@@ -186,10 +176,6 @@ class Q1TemplateBot(ForecastBot):
                 logger.info(f"Error: {str(e)}")
                 raise  # Raise other errors immediately
     
-    def cleanup(self):
-        # Make sure to close the log file when we're done
-        self.rate_limit_handler.close()
-
     async def _run_forecast_on_binary(
         self, question: BinaryQuestion, research: str
     ) -> ReasonedPrediction[float]:
@@ -468,5 +454,4 @@ if __name__ == "__main__":
         )
     forecast_reports = typeguard.check_type(forecast_reports, list[ForecastReport | BaseException])
     summarize_reports(forecast_reports)
-    template_bot.cleanup()
 
