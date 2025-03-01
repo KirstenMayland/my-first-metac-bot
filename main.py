@@ -94,13 +94,12 @@ class Q1TemplateBot(ForecastBot):
     last_request_time = 0  # Track the last request time to enforce delay
 
     async def _research_and_make_predictions(self, *args, **kwargs):
-
         try:
             logger.info("Calling ramp method")
             report = await super()._research_and_make_predictions(*args, **kwargs)
 
             # Detect if it's a RateLimitError
-            logger.info("checking if rate limit error")
+            logger.info("checking if rate limit error 1")
             for error in report.errors:
                 if "RateLimitError" in error:
                     use_free_model = False
@@ -109,7 +108,12 @@ class Q1TemplateBot(ForecastBot):
 
         except Exception as e:
             # Detect if it's a RateLimitError
-            logger.info("checking if rate limit error")
+            logger.info("checking if rate limit error 2")
+            if e is RuntimeError:
+                use_free_model = False
+                logger.warning(f"RateLimitError detected: {e}")
+                return
+
             if "RateLimitError" in e:
                 use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
@@ -120,7 +124,7 @@ class Q1TemplateBot(ForecastBot):
             report = await super()._run_individual_question(*args, **kwargs)
 
             # Detect if it's a RateLimitError
-            logger.info("checking if rate limit error")
+            logger.info("checking if rate limit error 3")
             for error in report.all_errors:
                 if "RateLimitError" in error:
                     use_free_model = False
@@ -129,7 +133,12 @@ class Q1TemplateBot(ForecastBot):
 
         except Exception as e:
             # Detect if it's a RateLimitError
-            logger.info("checking if rate limit error")
+            logger.info("checking if rate limit error 4")
+            if e is RuntimeError:
+                use_free_model = False
+                logger.warning(f"RateLimitError detected: {e}")
+                return
+
             if "RateLimitError" in e:
                 use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
