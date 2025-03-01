@@ -88,7 +88,7 @@ class Q1TemplateBot(ForecastBot):
                     logger.warning(f"RateLimitError detected: {error}")
                     return RateLimitError("Rate limit exceeded")
             return report
-            
+
         except Exception as e:
             # Detect if it's a RateLimitError
             if "RateLimitError" in str(e):
@@ -390,7 +390,10 @@ def summarize_reports(forecast_reports: list[ForecastReport | BaseException]) ->
         logger.info(question_summary)
 
     if exceptions:
-        raise RuntimeError(
+        # raise RuntimeError(
+        #     f"{len(exceptions)} errors occurred while forecasting: {exceptions}"
+        # )
+        logger.error(
             f"{len(exceptions)} errors occurred while forecasting: {exceptions}"
         )
     if minor_exceptions:
@@ -464,4 +467,3 @@ if __name__ == "__main__":
         )
     forecast_reports = typeguard.check_type(forecast_reports, list[ForecastReport | BaseException])
     summarize_reports(forecast_reports)
-
