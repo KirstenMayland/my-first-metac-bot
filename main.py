@@ -40,7 +40,7 @@ litellm_logger.propagate = False
 
 
 # Custom logging handler to capture log messages
-class RateLimitLogHandler():
+class RateLimitLogHandler(logging.Handler):
     def __init__(self):
         super().__init__()
 
