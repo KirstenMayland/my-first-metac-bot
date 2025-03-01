@@ -44,7 +44,7 @@ class RateLimitLogHandler(logging.Handler):
     def emit(self, record):
         try:
             msg = self.format(record)
-            print(f"RateLimitLogHandler received message: {msg}")  # Debugging line
+            logger.info(f"RateLimitLogHandler received message: {msg}") # Debugging line
             if "rate limit" in msg.lower():  # Adjust if needed based on exact message
                 self.switch_model_callback()
             elif "ratelimiterror" in msg.lower():  # Adjust if needed based on exact message
@@ -410,7 +410,7 @@ if __name__ == "__main__":
 
     # make changes, change last back to true
     template_bot = Q1TemplateBot(
-        research_reports_per_question=3,
+        research_reports_per_question=1,
         predictions_per_research_report=5,
         use_research_summary_to_forecast=False,
         publish_reports_to_metaculus=True,
