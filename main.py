@@ -87,38 +87,20 @@ class Q1TemplateBot(ForecastBot):
     Check out https://github.com/Metaculus/forecasting-tools for a full set of features from this package.
     Most notably there is a built in benchmarker that integrates with ForecastBot objects.
     """
-    # from forecasting_tools.ai_models.resource_managers.refreshing_bucket_rate_limiter import RefreshingBucketRateLimiter
-    # rate_limiter = RefreshingBucketRateLimiter(
-    #     capacity=2,
-    #     refresh_rate=1,
-    # ) # Allows 1 request per second on average with a burst of 2 requests initially. Set this as a class variable
-    # await self.rate_limiter.wait_till_able_to_acquire_resources(1) # 1 because it's consuming 1 request (use more if you are adding a token limit)
-
 
     _max_concurrent_questions = 1         # Set this to whatever works for your search-provider/ai-model rate limits
     _concurrency_limiter = asyncio.Semaphore(_max_concurrent_questions)
 
     last_request_time = 0  # Track the last request time to enforce delay
-    # use_free_model = True
 
-    # def __init__(self, *args, **kwargs):
-    #     # Make sure to call the parent __init__ method (don't override it)
-    #     super().__init__(*args, **kwargs)
-        
-    #     # Add rate-limit handler after initialization
-    #     rate_limit_handler = RateLimitLogHandler(self.switch_to_paid_model)
-    #     logger.addHandler(rate_limit_handler)
-
-    # def switch_to_paid_model(self):
-    #     if self.use_free_model:
-    #         logger.info("Switching to the paid model due to rate limit.")
-    #         self.use_free_model = False  # Switch to paid model
     async def _research_and_make_predictions(self, *args, **kwargs):
 
         try:
+            logger.info("Calling ramp method")
             report = await super()._research_and_make_predictions(*args, **kwargs)
 
             # Detect if it's a RateLimitError
+            logger.info("checking if rate limit error")
             for error in report.errors:
                 if "RateLimitError" in error:
                     use_free_model = False
@@ -127,15 +109,18 @@ class Q1TemplateBot(ForecastBot):
 
         except Exception as e:
             # Detect if it's a RateLimitError
+            logger.info("checking if rate limit error")
             if "RateLimitError" in e:
                 use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
         
     async def _run_individual_question(self, *args, **kwargs):
         try:
+            logger.info("Calling riq method")
             report = await super()._run_individual_question(*args, **kwargs)
 
             # Detect if it's a RateLimitError
+            logger.info("checking if rate limit error")
             for error in report.all_errors:
                 if "RateLimitError" in error:
                     use_free_model = False
@@ -144,9 +129,11 @@ class Q1TemplateBot(ForecastBot):
 
         except Exception as e:
             # Detect if it's a RateLimitError
+            logger.info("checking if rate limit error")
             if "RateLimitError" in e:
                 use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
+
 
     async def run_research(self, question: MetaculusQuestion) -> str:
         async with self._concurrency_limiter:
