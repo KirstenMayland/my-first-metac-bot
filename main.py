@@ -5,26 +5,27 @@ import os
 import time
 from datetime import datetime
 from typing import Literal
-from forecasting_tools.ai_models.resource_managers.refreshing_bucket_rate_limiter import RefreshingBucketRateLimiter
+# from forecasting_tools.ai_models.resource_managers.refreshing_bucket_rate_limiter import RefreshingBucketRateLimiter
 from litellm import RateLimitError  # Ensure litellm is imported
+from forecasting_tools import *
 
-from forecasting_tools import (
-    AskNewsSearcher,
-    BinaryQuestion,
-    ForecastBot,
-    GeneralLlm,
-    MetaculusApi,
-    MetaculusQuestion,
-    MultipleChoiceQuestion,
-    NumericDistribution,
-    NumericQuestion,
-    PredictedOptionList,
-    PredictionExtractor,
-    ReasonedPrediction,
-    SmartSearcher,
-    ForecastReport,
-    clean_indents,
-)
+# from forecasting_tools import (
+#     AskNewsSearcher,
+#     BinaryQuestion,
+#     ForecastBot,
+#     GeneralLlm,
+#     MetaculusApi,
+#     MetaculusQuestion,
+#     MultipleChoiceQuestion,
+#     NumericDistribution,
+#     NumericQuestion,
+#     PredictedOptionList,
+#     PredictionExtractor,
+#     ReasonedPrediction,
+#     SmartSearcher,
+#     ForecastReport,
+#     clean_indents,
+# )
 import typeguard
 
 use_free_model = True
@@ -128,7 +129,9 @@ class Q1TemplateBot(ForecastBot):
     #             use_free_model = False
     #             logger.warning(f"RateLimitError detected: {e}")
 
-    async def _research_and_make_predictions(self, *args, **kwargs):
+    async def _research_and_make_predictions(
+        self, question: MetaculusQuestion
+    ) -> ResearchWithPredictions[PredictionTypes]:
         research = await self.run_research(question)
         summary_report = await self.summarize_research(question, research)
         research_to_use = (
@@ -197,7 +200,9 @@ class Q1TemplateBot(ForecastBot):
     #             use_free_model = False
     #             logger.warning(f"RateLimitError detected: {e}")
 
-    async def _run_individual_question(self, *args, **kwargs):
+    async def _run_individual_question(
+        self, question: MetaculusQuestion
+    ) -> ForecastReport:
         scratchpad = await self._initialize_scratchpad(question)
         async with self._scratch_pad_lock:
             self._scratch_pads.append(scratchpad)
