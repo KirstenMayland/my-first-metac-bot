@@ -3,12 +3,12 @@ import asyncio
 import logging
 import os
 import time
+import typeguard
 from datetime import datetime
 from typing import Literal
 from litellm import RateLimitError  # Ensure litellm is imported
 from forecasting_tools import *
-
-import typeguard
+from tenacity import retry, wait_exponential, stop_after_attempt
 
 use_free_model = True
 
@@ -78,45 +78,70 @@ class Q1TemplateBot(ForecastBot):
 
     async def _research_and_make_predictions(self, *args, **kwargs):
         global use_free_model
-        try:
-            report = await super()._research_and_make_predictions(*args, **kwargs)
+        return await self._retry_on_rate_limit(super()._research_and_make_predictions, *args, **kwargs)
+        # try:
+        #     report = await self._retry_on_rate_limit(super()._research_and_make_predictions, *args, **kwargs)
 
-            # Detect if it's a RateLimitError
-            for error in report.errors:
-                if "RateLimitError" in error:
-                    use_free_model = False
-                    logger.warning(f"RateLimitError detected: {error}")
-                    return RateLimitError("Rate limit exceeded")
-            return report
+        #     # Detect if it's a RateLimitError
+        #     for error in report.errors:
+        #         if "RateLimitError" in error:
+        #             use_free_model = False
+        #             logger.warning(f"RateLimitError detected: {error}")
+        #             return RateLimitError("Rate limit exceeded")
+        #     return report
 
-        except Exception as e:
-            # Detect if it's a RateLimitError
-            if "RateLimitError" in str(e):
-                use_free_model = False
-                logger.warning(f"RateLimitError detected: {e}")
-            return e
+        # except Exception as e:
+        #     # Detect if it's a RateLimitError
+        #     if "RateLimitError" in str(e):
+        #         use_free_model = False
+        #         logger.warning(f"RateLimitError detected: {e}")
+        #     return e
         
     async def _run_individual_question(self, *args, **kwargs):
         global use_free_model
-        try:
-            report = await super()._run_individual_question(*args, **kwargs)
+        return await self._retry_on_rate_limit(super()._run_individual_question, *args, **kwargs)
+        # try:
+        #     report = await self._retry_on_rate_limit(super()._run_individual_question, *args, **kwargs)
 
-            # Detect if it's a RateLimitError
-            for error in report.all_errors:
-                if "RateLimitError" in error:
-                    use_free_model = False
-                    logger.warning(f"RateLimitError detected: {error}")
-                    return RateLimitError("Rate limit exceeded")
+        #     # Detect if it's a RateLimitError
+        #     for error in report.all_errors:
+        #         if "RateLimitError" in error:
+        #             use_free_model = False
+        #             logger.warning(f"RateLimitError detected: {error}")
+        #             return RateLimitError("Rate limit exceeded")
             
-            return report
+        #     return report
 
-        except Exception as e:
-            # Detect if it's a RateLimitError
-            if "RateLimitError" in str(e):
-                use_free_model = False
-                logger.warning(f"RateLimitError detected: {e}")
-            return e
+        # except Exception as e:
+        #     # Detect if it's a RateLimitError
+        #     if "RateLimitError" in str(e):
+        #         use_free_model = False
+        #         logger.warning(f"RateLimitError detected: {e}")
+        #     return e
 
+    async def _retry_on_rate_limit(self, func, *args, **kwargs):
+        global use_free_model
+        attempts = 0
+        while attempts < 5:  # Maximum 5 retries
+            try:
+                report = await func(*args, **kwargs)
+                for error in getattr(report, 'errors', []):
+                    if "RateLimitError" in error:
+                        raise RateLimitError("Rate limit exceeded")
+                return report
+
+            except Exception as e:
+                if "RateLimitError" in str(e):
+                    use_free_model = False
+                    attempts += 1
+                    wait_time = 2 ** attempts  # Exponential backoff (2, 4, 8, 16, 32 sec)
+                    logger.warning(f"RateLimitError detected: {e}. Retrying in {wait_time} seconds...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    logger.error(f"Unexpected error: {e}")
+                return e
+        logger.error("Max retries reached. Returning RateLimitError.")
+        return RateLimitError("Rate limit exceeded after retries")
 
     async def run_research(self, question: MetaculusQuestion) -> str:
         async with self._concurrency_limiter:
