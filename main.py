@@ -36,7 +36,7 @@ litellm_logger.setLevel(logging.WARNING)
 litellm_logger.propagate = False
 
 # Custom logging handler to capture log messages
-class RateLimitLogHandler(logging.Handler, log_file_path=None):
+class RateLimitLogHandler(logging.Handler):
     def __init__(self, switch_model_callback, log_file_path=None):
         super().__init__()
         self.switch_model_callback = switch_model_callback
