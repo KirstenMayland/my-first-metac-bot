@@ -115,7 +115,7 @@ class Q1TemplateBot(ForecastBot):
     #         logger.info("Switching to the paid model due to rate limit.")
     #         self.use_free_model = False  # Switch to paid model
     async def _run_individual_question_with_error_propagation(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super()._run_individual_question_with_error_propagation(*args, **kwargs)
 
         try:
             return await self._run_individual_question(question)
