@@ -42,9 +42,12 @@ class RateLimitLogHandler(logging.Handler):
         self.switch_model_callback = switch_model_callback
 
     def emit(self, record):
-        msg = self.format(record)
-        if "rate limit" in msg.lower():  # Check for rate limit in the log message
-            self.switch_model_callback()
+        try:
+            msg = self.format(record)
+            if "rate limit" in msg.lower():  # Adjust if needed based on exact message
+                self.switch_model_callback()
+        except Exception:
+            self.handleError(record)
 
 class Q1TemplateBot(ForecastBot):
     """
@@ -77,24 +80,25 @@ class Q1TemplateBot(ForecastBot):
     """
 
     _max_concurrent_questions = (
-        #10  # Set this to whatever works for your search-provider/ai-model rate limits
-        1
+        1         # Set this to whatever works for your search-provider/ai-model rate limits
     )
     _concurrency_limiter = asyncio.Semaphore(_max_concurrent_questions)
 
     last_request_time = 0  # Track the last request time to enforce delay
     use_free_model = True
 
+    def __init__(self, *args, **kwargs):
+        # Make sure to call the parent __init__ method (don't override it)
+        super().__init__(*args, **kwargs)
+        
+        # Add rate-limit handler after initialization
+        rate_limit_handler = RateLimitLogHandler(self.switch_to_paid_model)
+        logger.addHandler(rate_limit_handler)
 
     def switch_to_paid_model(self):
         if self.use_free_model:
             logger.info("Switching to the paid model due to rate limit.")
             self.use_free_model = False  # Switch to paid model
-
-    # Set up the custom log handler to capture rate limit messages
-    rate_limit_handler = RateLimitLogHandler(self.switch_to_paid_model)
-    rate_limit_handler.setLevel(logging.INFO)
-    logger.addHandler(rate_limit_handler)
 
     async def run_research(self, question: MetaculusQuestion) -> str:
         async with self._concurrency_limiter:
@@ -401,7 +405,7 @@ if __name__ == "__main__":
         use_research_summary_to_forecast=False,
         publish_reports_to_metaculus=True,
         folder_to_save_reports_to=None,
-        skip_previously_forecasted_questions=False, 
+        skip_previously_forecasted_questions=True, 
     )
 
     if run_mode == "tournament":
