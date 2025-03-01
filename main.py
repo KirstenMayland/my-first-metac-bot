@@ -102,6 +102,7 @@ class Q1TemplateBot(ForecastBot):
             logger.info("checking if rate limit error 1")
             for error in report.errors:
                 if "RateLimitError" in error:
+                    logger.info("in error 1")
                     use_free_model = False
                     logger.warning(f"RateLimitError detected: {error}")
                     return
@@ -110,12 +111,14 @@ class Q1TemplateBot(ForecastBot):
             # Detect if it's a RateLimitError
             logger.info("checking if rate limit error 2")
             if e is RuntimeError:
+                logger.info("in error 2")
                 use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
                 return
 
             logger.info("checking if rate limit error 3")
-            if "RateLimitError" in e:
+            if "RateLimitError" in str(e):
+                logger.info("in error 3")
                 use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
         
@@ -128,6 +131,7 @@ class Q1TemplateBot(ForecastBot):
             logger.info("checking if rate limit error 4")
             for error in report.all_errors:
                 if "RateLimitError" in error:
+                    logger.info("in error 4")
                     use_free_model = False
                     logger.warning(f"RateLimitError detected: {error}")
                     return
@@ -136,12 +140,14 @@ class Q1TemplateBot(ForecastBot):
             # Detect if it's a RateLimitError
             logger.info("checking if rate limit error 5")
             if e is RuntimeError:
+                logger.info("in error 5")
                 use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
                 return
 
             logger.info("checking if rate limit error 6")
-            if "RateLimitError" in e:
+            if "RateLimitError" in str(e):
+                logger.info("in error 6")
                 use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
 
