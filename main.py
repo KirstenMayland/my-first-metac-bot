@@ -5,27 +5,9 @@ import os
 import time
 from datetime import datetime
 from typing import Literal
-# from forecasting_tools.ai_models.resource_managers.refreshing_bucket_rate_limiter import RefreshingBucketRateLimiter
 from litellm import RateLimitError  # Ensure litellm is imported
 from forecasting_tools import *
 
-# from forecasting_tools import (
-#     AskNewsSearcher,
-#     BinaryQuestion,
-#     ForecastBot,
-#     GeneralLlm,
-#     MetaculusApi,
-#     MetaculusQuestion,
-#     MultipleChoiceQuestion,
-#     NumericDistribution,
-#     NumericQuestion,
-#     PredictedOptionList,
-#     PredictionExtractor,
-#     ReasonedPrediction,
-#     SmartSearcher,
-#     ForecastReport,
-#     clean_indents,
-# )
 import typeguard
 
 use_free_model = True
@@ -42,6 +24,7 @@ litellm_logger.propagate = False
 
 # Custom logging handler to capture log messages
 class RateLimitLogHandler(logging.Handler):
+    global use_free_model
     def __init__(self):
         super().__init__()
 
@@ -94,6 +77,7 @@ class Q1TemplateBot(ForecastBot):
     last_request_time = 0  # Track the last request time to enforce delay
 
     async def _research_and_make_predictions(self, *args, **kwargs):
+        global use_free_model
         try:
             logger.info("Calling ramp method")
             report = await super()._research_and_make_predictions(*args, **kwargs)
@@ -123,6 +107,7 @@ class Q1TemplateBot(ForecastBot):
                 logger.warning(f"RateLimitError detected: {e}")
         
     async def _run_individual_question(self, *args, **kwargs):
+        global use_free_model
         try:
             logger.info("Calling riq method")
             report = await super()._run_individual_question(*args, **kwargs)
@@ -188,6 +173,7 @@ class Q1TemplateBot(ForecastBot):
         return response
 
     def _get_final_decision_llm(self) -> GeneralLlm:
+        global use_free_model
         # model = None
         # if os.getenv("OPENROUTER_API_KEY"):
         #     model = GeneralLlm(model="openrouter/openai/o3-mini-high", temperature=0.3)
