@@ -81,12 +81,12 @@ class Q1TemplateBot(ForecastBot):
     Check out https://github.com/Metaculus/forecasting-tools for a full set of features from this package.
     Most notably there is a built in benchmarker that integrates with ForecastBot objects.
     """
-    from forecasting_tools.ai_models.resource_managers.refreshing_bucket_rate_limiter import RefreshingBucketRateLimiter
-    rate_limiter = RefreshingBucketRateLimiter(
-        capacity=2,
-        refresh_rate=1,
-    ) # Allows 1 request per second on average with a burst of 2 requests initially. Set this as a class variable
-    await self.rate_limiter.wait_till_able_to_acquire_resources(1) # 1 because it's consuming 1 request (use more if you are adding a token limit)
+    # from forecasting_tools.ai_models.resource_managers.refreshing_bucket_rate_limiter import RefreshingBucketRateLimiter
+    # rate_limiter = RefreshingBucketRateLimiter(
+    #     capacity=2,
+    #     refresh_rate=1,
+    # ) # Allows 1 request per second on average with a burst of 2 requests initially. Set this as a class variable
+    # await self.rate_limiter.wait_till_able_to_acquire_resources(1) # 1 because it's consuming 1 request (use more if you are adding a token limit)
 
 
     _max_concurrent_questions = (
