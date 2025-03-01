@@ -84,16 +84,17 @@ class Q1TemplateBot(ForecastBot):
 
     last_request_time = 0  # Track the last request time to enforce delay
     use_free_model = True
-    
-    # Set up the custom log handler to capture rate limit messages
-    rate_limit_handler = RateLimitLogHandler(self.switch_to_paid_model)
-    rate_limit_handler.setLevel(logging.INFO)
-    logger.addHandler(rate_limit_handler)
+
 
     def switch_to_paid_model(self):
         if self.use_free_model:
             logger.info("Switching to the paid model due to rate limit.")
             self.use_free_model = False  # Switch to paid model
+
+    # Set up the custom log handler to capture rate limit messages
+    rate_limit_handler = RateLimitLogHandler(self.switch_to_paid_model)
+    rate_limit_handler.setLevel(logging.INFO)
+    logger.addHandler(rate_limit_handler)
 
     async def run_research(self, question: MetaculusQuestion) -> str:
         async with self._concurrency_limiter:
