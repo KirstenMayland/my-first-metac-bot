@@ -79,60 +79,36 @@ class Q1TemplateBot(ForecastBot):
     async def _research_and_make_predictions(self, *args, **kwargs):
         global use_free_model
         try:
-            logger.info("Calling ramp method")
             report = await super()._research_and_make_predictions(*args, **kwargs)
 
             # Detect if it's a RateLimitError
-            logger.info("checking if rate limit error 1")
             for error in report.errors:
                 if "RateLimitError" in error:
-                    logger.info("in error 1")
                     use_free_model = False
                     logger.warning(f"RateLimitError detected: {error}")
                     return
 
         except Exception as e:
             # Detect if it's a RateLimitError
-            logger.info("checking if rate limit error 2")
-            if e is RuntimeError:
-                logger.info("in error 2")
-                use_free_model = False
-                logger.warning(f"RateLimitError detected: {e}")
-                return
-
-            logger.info("checking if rate limit error 3")
             if "RateLimitError" in str(e):
-                logger.info("in error 3")
                 use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
         
     async def _run_individual_question(self, *args, **kwargs):
         global use_free_model
         try:
-            logger.info("Calling riq method")
             report = await super()._run_individual_question(*args, **kwargs)
 
             # Detect if it's a RateLimitError
-            logger.info("checking if rate limit error 4")
             for error in report.all_errors:
                 if "RateLimitError" in error:
-                    logger.info("in error 4")
                     use_free_model = False
                     logger.warning(f"RateLimitError detected: {error}")
                     return
 
         except Exception as e:
             # Detect if it's a RateLimitError
-            logger.info("checking if rate limit error 5")
-            if e is RuntimeError:
-                logger.info("in error 5")
-                use_free_model = False
-                logger.warning(f"RateLimitError detected: {e}")
-                return
-
-            logger.info("checking if rate limit error 6")
             if "RateLimitError" in str(e):
-                logger.info("in error 6")
                 use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
 
@@ -172,7 +148,7 @@ class Q1TemplateBot(ForecastBot):
         response = await model.invoke(prompt)
         return response
 
-    def _get_final_decision_llm(self) -> GeneralLlm:
+    async def _get_final_decision_llm(self) -> GeneralLlm:
         global use_free_model
         # model = None
         # if os.getenv("OPENROUTER_API_KEY"):
@@ -189,7 +165,7 @@ class Q1TemplateBot(ForecastBot):
                 # Enforce a 5-second delay between requests
                 time_since_last_request = time.time() - self.last_request_time
                 if time_since_last_request < 6:
-                    time.sleep(6 - time_since_last_request)
+                    await time.sleep(6 - time_since_last_request)
                 self.last_request_time = time.time()  # Update request time
                 
                 model = GeneralLlm(model="openrouter/deepseek/deepseek-r1:free", temperature=0.3)
@@ -244,7 +220,6 @@ class Q1TemplateBot(ForecastBot):
             The last thing you write is your final answer as: "Probability: ZZ%", 0-100
             """
         )
-        logger.info("Debug: getting the final decision llm.")
         reasoning = await self._get_final_decision_llm().invoke(prompt)
         prediction: float = PredictionExtractor.extract_last_percentage_value(
             reasoning, max_prediction=1, min_prediction=0
@@ -294,7 +269,6 @@ class Q1TemplateBot(ForecastBot):
             Option_N: Probability_N
             """
         )
-        logger.info("Debug: getting the final decision llm.")
         reasoning = await self._get_final_decision_llm().invoke(prompt)
         prediction: PredictedOptionList = (
             PredictionExtractor.extract_option_list_with_percentage_afterwards(
@@ -361,7 +335,6 @@ class Q1TemplateBot(ForecastBot):
             "
             """
         )
-        logger.info("Debug: getting the final decision llm.")
         reasoning = await self._get_final_decision_llm().invoke(prompt)
         prediction: NumericDistribution = (
             PredictionExtractor.extract_numeric_distribution_from_list_of_percentile_number_and_probability(
