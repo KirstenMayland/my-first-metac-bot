@@ -44,7 +44,7 @@ class RateLimitLogHandler(logging.Handler):
     def emit(self, record):
         try:
             msg = self.format(record)
-            logger.info(f"RateLimitLogHandler received message: {msg}") # Debugging line
+            print(f"RateLimitLogHandler received message: {msg}")  # Debugging line
             if "rate limit" in msg.lower():  # Adjust if needed based on exact message
                 self.switch_model_callback()
             elif "ratelimiterror" in msg.lower():  # Adjust if needed based on exact message
