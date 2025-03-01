@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import logging
 import os
+import time
 from datetime import datetime
 from typing import Literal
 
@@ -113,22 +114,23 @@ class Q1TemplateBot(ForecastBot):
         # else:
         #     raise ValueError("No API key for final_decision_llm found")
         # return model
+
         model = None
         use_free_model = True
 
-        # Enforce a 5-second delay between requests
-        time_since_last_request = time.time() - self.last_request_time
-        if time_since_last_request < 5:
-            time.sleep(5 - time_since_last_request)
-
         while True:
             try:
-                if use_free_model:
+                if use_free_model:                    
+                    # Enforce a 5-second delay between requests
+                    time_since_last_request = time.time() - self.last_request_time
+                    if time_since_last_request < 5:
+                        time.sleep(5 - time_since_last_request)
+                    self.last_request_time = time.time()  # Update request time
+                    
                     model = GeneralLlm(model="openrouter/deepseek/deepseek-r1:free", temperature=0.3)
                 else:
                     model = GeneralLlm(model="openrouter/deepseek/deepseek-r1", temperature=0.3)
 
-                self.last_request_time = time.time()  # Update request time
                 return model  # Return model if no exceptions occur
 
             except Exception as e:
