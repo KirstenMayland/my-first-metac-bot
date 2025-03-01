@@ -28,8 +28,6 @@ from forecasting_tools import (
 import typeguard
 
 use_free_model = True
-MAX_RETRIES = 5  # Number of retries before failing
-INITIAL_BACKOFF = 5  # Start with a 5-second delay
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -114,23 +112,36 @@ class Q1TemplateBot(ForecastBot):
     #     if self.use_free_model:
     #         logger.info("Switching to the paid model due to rate limit.")
     #         self.use_free_model = False  # Switch to paid model
-    async def _run_individual_question_with_error_propagation(self, *args, **kwargs):
-        super()._run_individual_question_with_error_propagation(*args, **kwargs)
+    async def _research_and_make_predictions(self, *args, **kwargs):
 
         try:
-            return await self._run_individual_question(question)
-        except Exception as e:
-            error_message = f"Error while processing question url: '{question.page_url}'"
-            logger.error(f"{error_message}: {e}")
+            await super()._research_and_make_predictions(*args, **kwargs)
 
             # Detect if it's a RateLimitError
-            if "RateLimitError" in str(e):
+            if "RateLimitError" in errors:
                 use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
-            
-            self._reraise_exception_with_prepended_message(e, error_message)
-            assert False, "This should raise an exception"
 
+        except Exception as e:
+            # Detect if it's a RateLimitError
+            if "RateLimitError" in errors:
+                use_free_model = False
+                logger.warning(f"RateLimitError detected: {e}")
+        
+    async def _run_individual_question(self, *args, **kwargs):
+        try:
+            await super()._run_individual_question(*args, **kwargs)
+
+            # Detect if it's a RateLimitError
+            if "RateLimitError" in research_errors:
+                use_free_model = False
+                logger.warning(f"RateLimitError detected: {e}")
+
+        except Exception as e:
+            # Detect if it's a RateLimitError
+            if "RateLimitError" in errors:
+                use_free_model = False
+                logger.warning(f"RateLimitError detected: {e}")
 
 
     async def run_research(self, question: MetaculusQuestion) -> str:
