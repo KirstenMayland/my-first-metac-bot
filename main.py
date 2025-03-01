@@ -220,7 +220,7 @@ class Q1TemplateBot(ForecastBot):
             The last thing you write is your final answer as: "Probability: ZZ%", 0-100
             """
         )
-        reasoning = await self._get_final_decision_llm().invoke(prompt)
+        reasoning = await (await self._get_final_decision_llm()).invoke(prompt)
         prediction: float = PredictionExtractor.extract_last_percentage_value(
             reasoning, max_prediction=1, min_prediction=0
         )
@@ -269,7 +269,7 @@ class Q1TemplateBot(ForecastBot):
             Option_N: Probability_N
             """
         )
-        reasoning = await self._get_final_decision_llm().invoke(prompt)
+        reasoning = await (await self._get_final_decision_llm()).invoke(prompt)
         prediction: PredictedOptionList = (
             PredictionExtractor.extract_option_list_with_percentage_afterwards(
                 reasoning, question.options
@@ -335,7 +335,7 @@ class Q1TemplateBot(ForecastBot):
             "
             """
         )
-        reasoning = await self._get_final_decision_llm().invoke(prompt)
+        reasoning = await (await self._get_final_decision_llm()).invoke(prompt)
         prediction: NumericDistribution = (
             PredictionExtractor.extract_numeric_distribution_from_list_of_percentile_number_and_probability(
                 reasoning, question
