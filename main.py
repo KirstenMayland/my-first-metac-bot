@@ -83,13 +83,12 @@ class Q1TemplateBot(ForecastBot):
     _concurrency_limiter = asyncio.Semaphore(_max_concurrent_questions)
 
     last_request_time = 0  # Track the last request time to enforce delay
-
-    def __init__(self):
-        self.use_free_model = True
-        # Set up the custom log handler to capture rate limit messages
-        rate_limit_handler = RateLimitLogHandler(self.switch_to_paid_model)
-        rate_limit_handler.setLevel(logging.INFO)
-        logger.addHandler(rate_limit_handler)
+    use_free_model = True
+    
+    # Set up the custom log handler to capture rate limit messages
+    rate_limit_handler = RateLimitLogHandler(self.switch_to_paid_model)
+    rate_limit_handler.setLevel(logging.INFO)
+    logger.addHandler(rate_limit_handler)
 
     def switch_to_paid_model(self):
         if self.use_free_model:
