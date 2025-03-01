@@ -69,6 +69,8 @@ class Q1TemplateBot(ForecastBot):
     )
     _concurrency_limiter = asyncio.Semaphore(_max_concurrent_questions)
 
+    last_request_time = 0  # Track the last request time to enforce delay
+
     async def run_research(self, question: MetaculusQuestion) -> str:
         async with self._concurrency_limiter:
             research = ""
@@ -105,13 +107,37 @@ class Q1TemplateBot(ForecastBot):
         return response
 
     def _get_final_decision_llm(self) -> GeneralLlm:
+        # model = None
+        # if os.getenv("OPENROUTER_API_KEY"):
+        #     model = GeneralLlm(model="openrouter/openai/o3-mini-high", temperature=0.3)
+        # else:
+        #     raise ValueError("No API key for final_decision_llm found")
+        # return model
         model = None
-        if os.getenv("OPENROUTER_API_KEY"):
-            model = GeneralLlm(model="openrouter/openai/o3-mini-high", temperature=0.3)
-            # model = GeneralLlm(model="openrouter/deepseek/deepseek-r1", temperature=0.3)
-        else:
-            raise ValueError("No API key for final_decision_llm found")
-        return model
+        use_free_model = True
+
+        # Enforce a 5-second delay between requests
+        time_since_last_request = time.time() - self.last_request_time
+        if time_since_last_request < 5:
+            time.sleep(5 - time_since_last_request)
+
+        while True:
+            try:
+                if use_free_model:
+                    model = GeneralLlm(model="openrouter/deepseek/deepseek-r1:free", temperature=0.3)
+                else:
+                    model = GeneralLlm(model="openrouter/deepseek/deepseek-r1", temperature=0.3)
+
+                self.last_request_time = time.time()  # Update request time
+                return model  # Return model if no exceptions occur
+
+            except Exception as e:
+                if "rate limit" in str(e).lower() and use_free_model:
+                    logger.warning("Rate limit reached for the free model. Switching to paid model.")
+                    use_free_model = False  # Switch to the paid model
+                else:
+                    raise  # Raise other errors immediately
+
 
     async def _run_forecast_on_binary(
         self, question: BinaryQuestion, research: str
