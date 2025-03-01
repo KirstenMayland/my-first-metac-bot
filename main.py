@@ -76,41 +76,46 @@ class Q1TemplateBot(ForecastBot):
 
     last_request_time = 0  # Track the last request time to enforce delay
 
-    # async def _research_and_make_predictions(self, *args, **kwargs):
-    #     global use_free_model
-    #     try:
-    #         report = await super()._research_and_make_predictions(*args, **kwargs)
+    async def _research_and_make_predictions(self, *args, **kwargs):
+        global use_free_model
+        try:
+            report = await super()._research_and_make_predictions(*args, **kwargs)
 
-    #         # Detect if it's a RateLimitError
-    #         for error in report.errors:
-    #             if "RateLimitError" in error:
-    #                 use_free_model = False
-    #                 logger.warning(f"RateLimitError detected: {error}")
-    #                 return
-
-    #     except Exception as e:
-    #         # Detect if it's a RateLimitError
-    #         if "RateLimitError" in str(e):
-    #             use_free_model = False
-    #             logger.warning(f"RateLimitError detected: {e}")
+            # Detect if it's a RateLimitError
+            for error in report.errors:
+                if "RateLimitError" in error:
+                    use_free_model = False
+                    logger.warning(f"RateLimitError detected: {error}")
+                    return RateLimitError("Rate limit exceeded")
+            return report
+            
+        except Exception as e:
+            # Detect if it's a RateLimitError
+            if "RateLimitError" in str(e):
+                use_free_model = False
+                logger.warning(f"RateLimitError detected: {e}")
+            return e
         
-    # async def _run_individual_question(self, *args, **kwargs):
-    #     global use_free_model
-    #     try:
-    #         report = await super()._run_individual_question(*args, **kwargs)
+    async def _run_individual_question(self, *args, **kwargs):
+        global use_free_model
+        try:
+            report = await super()._run_individual_question(*args, **kwargs)
 
-    #         # Detect if it's a RateLimitError
-    #         for error in report.all_errors:
-    #             if "RateLimitError" in error:
-    #                 use_free_model = False
-    #                 logger.warning(f"RateLimitError detected: {error}")
-    #                 return
+            # Detect if it's a RateLimitError
+            for error in report.all_errors:
+                if "RateLimitError" in error:
+                    use_free_model = False
+                    logger.warning(f"RateLimitError detected: {error}")
+                    return RateLimitError("Rate limit exceeded")
+            
+            return report
 
-    #     except Exception as e:
-    #         # Detect if it's a RateLimitError
-    #         if "RateLimitError" in str(e):
-    #             use_free_model = False
-    #             logger.warning(f"RateLimitError detected: {e}")
+        except Exception as e:
+            # Detect if it's a RateLimitError
+            if "RateLimitError" in str(e):
+                use_free_model = False
+                logger.warning(f"RateLimitError detected: {e}")
+            return e
 
 
     async def run_research(self, question: MetaculusQuestion) -> str:
