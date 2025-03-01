@@ -120,7 +120,8 @@ class Q1TemplateBot(ForecastBot):
 
         while True:
             try:
-                if use_free_model:                    
+                if use_free_model:
+                    logger.info("Free model")                    
                     # Enforce a 5-second delay between requests
                     time_since_last_request = time.time() - self.last_request_time
                     if time_since_last_request < 5:
@@ -135,7 +136,7 @@ class Q1TemplateBot(ForecastBot):
 
             except Exception as e:
                 if "rate limit" in str(e).lower() and use_free_model:
-                    logger.warning("Rate limit reached for the free model. Switching to paid model.")
+                    logger.info("Debug: Rate limit reached for the free model. Switching to paid model.")
                     use_free_model = False  # Switch to the paid model
                 else:
                     raise  # Raise other errors immediately
@@ -178,6 +179,7 @@ class Q1TemplateBot(ForecastBot):
             The last thing you write is your final answer as: "Probability: ZZ%", 0-100
             """
         )
+        logger.info("Debug: getting the final decision llm.")
         reasoning = await self._get_final_decision_llm().invoke(prompt)
         prediction: float = PredictionExtractor.extract_last_percentage_value(
             reasoning, max_prediction=1, min_prediction=0
@@ -227,6 +229,7 @@ class Q1TemplateBot(ForecastBot):
             Option_N: Probability_N
             """
         )
+        logger.info("Debug: getting the final decision llm.")
         reasoning = await self._get_final_decision_llm().invoke(prompt)
         prediction: PredictedOptionList = (
             PredictionExtractor.extract_option_list_with_percentage_afterwards(
@@ -293,6 +296,7 @@ class Q1TemplateBot(ForecastBot):
             "
             """
         )
+        logger.info("Debug: getting the final decision llm.")
         reasoning = await self._get_final_decision_llm().invoke(prompt)
         prediction: NumericDistribution = (
             PredictionExtractor.extract_numeric_distribution_from_list_of_percentile_number_and_probability(
