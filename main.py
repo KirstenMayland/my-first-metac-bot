@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from typing import Literal
 from forecasting_tools.ai_models.resource_managers.refreshing_bucket_rate_limiter import RefreshingBucketRateLimiter
+from litellm import RateLimitError  # Ensure litellm is imported
 
 from forecasting_tools import (
     AskNewsSearcher,
@@ -27,6 +28,8 @@ from forecasting_tools import (
 import typeguard
 
 use_free_model = True
+MAX_RETRIES = 5  # Number of retries before failing
+INITIAL_BACKOFF = 5  # Start with a 5-second delay
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -37,7 +40,6 @@ logger = logging.getLogger(__name__)
 litellm_logger = logging.getLogger("LiteLLM")
 litellm_logger.setLevel(logging.WARNING)
 litellm_logger.propagate = False
-
 
 # Custom logging handler to capture log messages
 class RateLimitLogHandler(logging.Handler):
@@ -54,6 +56,7 @@ class RateLimitLogHandler(logging.Handler):
             self.handleError(record)
 
 rate_limit_handler = RateLimitLogHandler()
+rate_limit_handler.setLevel(logging.WARNING)
 logger.addHandler(rate_limit_handler)
         
 class Q1TemplateBot(ForecastBot):
@@ -111,6 +114,23 @@ class Q1TemplateBot(ForecastBot):
     #     if self.use_free_model:
     #         logger.info("Switching to the paid model due to rate limit.")
     #         self.use_free_model = False  # Switch to paid model
+    async def _run_individual_question_with_error_propagation(self, question):
+        retries = 0
+        backoff = INITIAL_BACKOFF  # Start with a 5-second wait
+        try:
+            return await self._run_individual_question(question)
+        except Exception as e:
+            error_message = f"Error while processing question url: '{question.page_url}'"
+            logger.error(f"{error_message}: {e}")
+
+            # Detect if it's a RateLimitError
+            if "RateLimitError" in str(e):
+                logger.warning(f"RateLimitError detected: {e}")
+            
+            self._reraise_exception_with_prepended_message(e, error_message)
+            assert False, "This should raise an exception"
+
+
 
     async def run_research(self, question: MetaculusQuestion) -> str:
         async with self._concurrency_limiter:
@@ -156,26 +176,29 @@ class Q1TemplateBot(ForecastBot):
         # return model
 
         model = None
-        while True:
-            try:
-                if use_free_model:
-                    logger.info("Attempting to use free model")                    
-                    # Enforce a 5-second delay between requests
-                    time_since_last_request = time.time() - self.last_request_time
-                    if time_since_last_request < 6:
-                        time.sleep(6 - time_since_last_request)
-                    self.last_request_time = time.time()  # Update request time
-                    
-                    model = GeneralLlm(model="openrouter/deepseek/deepseek-r1:free", temperature=0.3)
-                else:
-                    logger.info("Attempting to use paid model")    
-                    model = GeneralLlm(model="openrouter/deepseek/deepseek-r1", temperature=0.3)
+        try:
+            if use_free_model and os.getenv("OPENROUTER_API_KEY"):
+                logger.info("Attempting to use free model")                    
+                # Enforce a 5-second delay between requests
+                time_since_last_request = time.time() - self.last_request_time
+                if time_since_last_request < 6:
+                    time.sleep(6 - time_since_last_request)
+                self.last_request_time = time.time()  # Update request time
+                
+                model = GeneralLlm(model="openrouter/deepseek/deepseek-r1:free", temperature=0.3)
 
-                return model  # Return model if no exceptions occur
+            elif os.getenv("OPENROUTER_API_KEY") and not use_free_model:
+                logger.info("Attempting to use paid model")    
+                model = GeneralLlm(model="openrouter/deepseek/deepseek-r1", temperature=0.3)
 
-            except Exception as e: # it's comming from a warning and in the message
-                logger.info(f"Error: {str(e)}")
-                raise  # Raise other errors immediately
+            else:
+                raise ValueError("No API key for final_decision_llm found")
+
+            return model  # Return model if no exceptions occur
+
+        except Exception as e: # it's comming from a warning and in the message
+            logger.info(f"Error: {str(e)}")
+            raise  # Raise other errors immediately
     
     async def _run_forecast_on_binary(
         self, question: BinaryQuestion, research: str
