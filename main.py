@@ -38,8 +38,6 @@ litellm_logger = logging.getLogger("LiteLLM")
 litellm_logger.setLevel(logging.WARNING)
 litellm_logger.propagate = False
 
-rate_limit_handler = RateLimitLogHandler()
-logger.addHandler(rate_limit_handler)
 
 # Custom logging handler to capture log messages
 class RateLimitLogHandler():
@@ -54,6 +52,9 @@ class RateLimitLogHandler():
 
         except Exception:
             self.handleError(record)
+
+rate_limit_handler = RateLimitLogHandler()
+logger.addHandler(rate_limit_handler)
         
 class Q1TemplateBot(ForecastBot):
     """
