@@ -125,6 +125,7 @@ class Q1TemplateBot(ForecastBot):
 
             # Detect if it's a RateLimitError
             if "RateLimitError" in str(e):
+                use_free_model = False
                 logger.warning(f"RateLimitError detected: {e}")
             
             self._reraise_exception_with_prepended_message(e, error_message)
