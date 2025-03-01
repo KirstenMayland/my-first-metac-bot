@@ -35,6 +35,17 @@ litellm_logger = logging.getLogger("LiteLLM")
 litellm_logger.setLevel(logging.WARNING)
 litellm_logger.propagate = False
 
+# Custom logging handler to capture log messages
+class RateLimitLogHandler(logging.Handler):
+    def __init__(self, switch_model_callback):
+        super().__init__()
+        self.switch_model_callback = switch_model_callback
+
+    def emit(self, record):
+        msg = self.format(record)
+        if "rate limit" in msg.lower():  # Check for rate limit in the log message
+            self.switch_model_callback()
+
 class Q1TemplateBot(ForecastBot):
     """
     This is a template bot that uses the forecasting-tools library to simplify bot making.
@@ -72,6 +83,18 @@ class Q1TemplateBot(ForecastBot):
     _concurrency_limiter = asyncio.Semaphore(_max_concurrent_questions)
 
     last_request_time = 0  # Track the last request time to enforce delay
+
+    def __init__(self):
+        self.use_free_model = True
+        # Set up the custom log handler to capture rate limit messages
+        rate_limit_handler = RateLimitLogHandler(self.switch_to_paid_model)
+        rate_limit_handler.setLevel(logging.INFO)
+        logger.addHandler(rate_limit_handler)
+
+    def switch_to_paid_model(self):
+        if self.use_free_model:
+            logger.info("Switching to the paid model due to rate limit.")
+            self.use_free_model = False  # Switch to paid model
 
     async def run_research(self, question: MetaculusQuestion) -> str:
         async with self._concurrency_limiter:
@@ -117,32 +140,26 @@ class Q1TemplateBot(ForecastBot):
         # return model
 
         model = None
-        use_free_model = True
-
         while True:
             try:
-                if use_free_model:
-                    logger.info("Free model")                    
+                if self.use_free_model:
+                    logger.info("Attempting to use free model")                    
                     # Enforce a 5-second delay between requests
                     time_since_last_request = time.time() - self.last_request_time
-                    if time_since_last_request < 5:
-                        time.sleep(5 - time_since_last_request)
+                    if time_since_last_request < 6:
+                        time.sleep(6 - time_since_last_request)
                     self.last_request_time = time.time()  # Update request time
                     
                     model = GeneralLlm(model="openrouter/deepseek/deepseek-r1:free", temperature=0.3)
                 else:
-                    logger.info("Paid model")    
+                    logger.info("Attempting to use paid model")    
                     model = GeneralLlm(model="openrouter/deepseek/deepseek-r1", temperature=0.3)
 
                 return model  # Return model if no exceptions occur
 
             except Exception as e: # it's comming from a warning and in the message
-                logger.info("Got exception")   
-                if "rate limit" in str(e).lower() and use_free_model:
-                    logger.info("Debug: Rate limit reached for the free model. Switching to paid model.")
-                    use_free_model = False  # Switch to the paid model
-                else:
-                    raise  # Raise other errors immediately
+                logger.info(f"Error: {str(e)}")
+                raise  # Raise other errors immediately
 
 
     async def _run_forecast_on_binary(
