@@ -66,7 +66,8 @@ class Q1TemplateBot(ForecastBot):
     """
 
     _max_concurrent_questions = (
-        10  # Set this to whatever works for your search-provider/ai-model rate limits
+        #10  # Set this to whatever works for your search-provider/ai-model rate limits
+        1
     )
     _concurrency_limiter = asyncio.Semaphore(_max_concurrent_questions)
 
@@ -130,11 +131,13 @@ class Q1TemplateBot(ForecastBot):
                     
                     model = GeneralLlm(model="openrouter/deepseek/deepseek-r1:free", temperature=0.3)
                 else:
+                    logger.info("Paid model")    
                     model = GeneralLlm(model="openrouter/deepseek/deepseek-r1", temperature=0.3)
 
                 return model  # Return model if no exceptions occur
 
-            except Exception as e:
+            except Exception as e: # it's comming from a warning and in the message
+                logger.info("Got exception")   
                 if "rate limit" in str(e).lower() and use_free_model:
                     logger.info("Debug: Rate limit reached for the free model. Switching to paid model.")
                     use_free_model = False  # Switch to the paid model
