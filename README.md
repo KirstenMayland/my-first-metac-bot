@@ -1,4 +1,7 @@
-# Simple Metaculus forecasting bot
+# Kirsten Mayland - Bot Alterations
+As of 3/1/2025 - primary alteration is changing from OpenAI's o3-mini to Deepseek R1, where the bot starts at the free model and switches to the paid one when it hits the rate limit
+
+# From Template: Simple Metaculus forecasting bot
 This repository contains a simple bot meant to get you started with creating your own bot for the AI Forecasting Tournament. Go to https://www.metaculus.com/aib/ for more info and tournament rules.
 
 In this project are 2 files:
